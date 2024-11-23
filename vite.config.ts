@@ -19,7 +19,6 @@ export default defineConfig({
   //     },
   //   }),
   // ],
-  // base: '/',
   // resolve: {
   //   alias: {
   //     '@': path.resolve(__dirname, './src'),
@@ -33,7 +32,5 @@ export default defineConfig({
   //   strictPort: true,
   //   port: 3000,
   // },
-  // build: {
-  //   outDir: 'dist',
-  // },
+
 })

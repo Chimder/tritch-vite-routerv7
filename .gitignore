@@ -10,6 +10,7 @@ lerna-debug.log*
 .react-router
 /.cache
 
+build
 node_modules
 dist
 .env
