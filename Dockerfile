@@ -1,26 +1,31 @@
-FROM node:20-slim AS base
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
-
+FROM node:20-alpine as dependencies-env
+RUN npm i -g pnpm
 COPY . /app
+
+FROM dependencies-env as development-dependencies-env
+COPY ./package.json pnpm-lock.yaml /app/
+WORKDIR /app
+RUN pnpm i --frozen-lockfile
+
+FROM dependencies-env as production-dependencies-env
+COPY ./package.json pnpm-lock.yaml /app/
+WORKDIR /app
+RUN pnpm i --prod --frozen-lockfile
+
+FROM dependencies-env AS build-env
+COPY ./package.json pnpm-lock.yaml /app/
+COPY --from=development-dependencies-env /app/node_modules /app/node_modules
 WORKDIR /app
 
-FROM base AS prod-deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
+ENV VITE_BACK_API=${VITE_BACK_API}
+ENV VITE_PUBLIC_CLIENT_ID=${VITE_PUBLIC_CLIENT_ID}
+ENV VITE_PUBLIC_CLIENT_SECRET=${VITE_PUBLIC_CLIENT_SECRET}
 
-FROM base AS build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm run build
+RUN pnpm build
 
-FROM nginx:alpine
-
-
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY default.conf /etc/nginx/conf.d/default.conf
-
-COPY --from=build /app/dist /usr/share/nginx/html
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+FROM dependencies-env
+COPY ./package.json pnpm-lock.yaml /app/
+COPY --from=production-dependencies-env /app/node_modules /app/node_modules
+COPY --from=build-env /app/build /app/build
+WORKDIR /app
+CMD ["pnpm", "start"]
